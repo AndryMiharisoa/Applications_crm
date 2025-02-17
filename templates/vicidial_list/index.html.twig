@@ -1,0 +1,448 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard CRM
+{% endblock %}
+
+{% block stylesheets %}
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css" rel="stylesheet">
+	<style>
+		body {
+			font-family: 'Arial', sans-serif;
+			margin: 0;
+			padding: 0;
+			background-color: #f4f7fc;
+		}
+		.sidebar {
+			position: fixed;
+			top: 0;
+			left: 0;
+			height: 100%;
+			width: 250px;
+			background-color: #28334a;
+			color: #fff;
+			padding-top: 30px;
+			transition: width 0.3s;
+			z-index: 1000;
+		}
+		.sidebar .nav-link {
+			color: #c9d1d9 !important;
+		}
+		.sidebar .nav-link.active {
+			background-color: #1976D2;
+		}
+		.sidebar .nav-link:hover {
+			background-color: #2f3e56;
+		}
+		.sidebar .nav-item {
+			margin-bottom: 20px;
+		}
+		.sidebar .logo-container {
+			text-align: center;
+			margin-bottom: 20px;
+		}
+		.sidebar .logo-container img {
+			width: 150px;
+			height: auto;
+			border-radius: 10px;
+		}
+		.main-content {
+			margin-left: 250px;
+			padding: 30px;
+			background-color: #fff;
+			min-height: 100vh;
+		}
+		.main-content .card {
+			border-radius: 10px;
+			background-color: #f1f8ff;
+		}
+		.toggle-sidebar {
+			position: absolute;
+			top: 20px;
+			right: 20px;
+			display: none;
+			font-size: 28px;
+			color: #fff;
+			background-color: #28334a;
+			border: none;
+			padding: 10px;
+			cursor: pointer;
+			z-index: 10;
+		}
+		@media(max-width: 768px) {
+			.sidebar {
+				width: 0;
+				padding-top: 50px;
+			}
+			.main-content {
+				margin-left: 0;
+			}
+			.toggle-sidebar {
+				display: block;
+			}
+			.sidebar.open {
+				width: 250px;
+			}
+		}
+		/* Pour les petits écrans, faire défiler la table horizontalement */
+		@media(max-width: 768px) {
+			.table-responsive {
+				overflow-x: auto;
+			}
+		}
+	</style>
+{% endblock %}
+
+{% block body %}
+	<!-- Sidebar -->
+	<nav class="sidebar">
+		<div
+			class="logo-container">{# <img src="{{ asset('logo.jpg') }}" alt="Logo"> #}
+		</div>
+		<ul class="nav flex-column">
+			<li class="nav-item">
+				<a href="#" class="nav-link active">
+					<i class="fas fa-home"></i>
+					Dashboard
+				</a>
+			</li>
+			<li class="nav-item">
+				<a href="#add-contact" class="nav-link">
+					<i class="fas fa-user-plus"></i>
+					Ajouter Contact
+				</a>
+			</li>
+			<li class="nav-item">
+				<a href="#contact-list" class="nav-link">
+					<i class="fas fa-address-book"></i>
+					Liste des Agents
+				</a>
+			</li>
+			<li class="nav-item">
+				<a href="#settings" class="nav-link">
+					<i class="fas fa-cogs"></i>
+					Paramètres
+				</a>
+			</li>
+			<li class="nav-item">
+				<a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
+					<i class="fas fa-sign-out-alt"></i>
+					Déconnexion
+				</a>
+			</li>
+		</ul>
+	</nav>
+
+	<div class="notifications">
+
+		<p></p>
+
+	</div>
+
+
+	<!-- Main Content -->
+	<div class="main-content">
+		<button class="toggle-sidebar" onclick="toggleSidebar()">&#9776;</button>
+		<h3>Bienvenue dans le CRM</h3>
+		<div class="row mb-4">
+			<div class="col-md-4">
+				<div class="card shadow-sm">
+					<div class="card-body">
+						<h5 class="card-title">VALIDE</h5>
+						<p class="card-text" id="ouiCount">Une nouvelle Oui: 0...</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<div class="card shadow-sm" style="background-color: #e3f2fd;">
+					<div class="card-body">
+						<h5 class="card-title">NON VALIDE</h5>
+						<p class="card-text" id="nonCount">
+							Non: 0 ...</p>
+
+
+					</div>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<div class="card shadow-sm" style="background-color: #fce4ec;">
+					<div class="card-body">
+						<h5 class="card-title">NON TRAITÉ</h5>
+						<p class="card-text" id="noSelectionCount">en cours de sélection......: 0</p>
+
+
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+		<!-- Filtre par date -->
+		<form method="get" action="{{ path('vicidial_list_index') }}">
+			<div class="row mb-4">
+				<div class="col-md-3">
+					<label for="startDate" class="form-label">Date de début</label>
+					<input type="date" id="startDate" name="startDate" class="form-control" value="{{ app.request.get('startDate') }}">
+				</div>
+				<div class="col-md-3">
+					<label for="endDate" class="form-label">Date de fin</label>
+					<input type="date" id="endDate" name="endDate" class="form-control" value="{{ app.request.get('endDate') }}">
+				</div>
+				<div class="col-md-2 align-self-end">
+					<button type="submit" class="btn btn-primary">
+						<i class="fas fa-check"></i>
+						Valider
+					</button>
+
+				</div>
+				<div class="col-md-2 align-self-end">
+					<button type="button" class="btn btn-success" onclick="exportExcel()">
+						<img src="https://cdn-icons-png.flaticon.com/512/732/732220.png" alt="Excel Icon" style="vertical-align: middle; width: 20px; height: 20px;">
+						Exporter en Excel
+					</button>
+				</div>
+
+			</div>
+		</form>
+
+		<!-- Liste des Contacts -->
+		<section id="contact-list" class="card">
+			<div class="card-header">
+				<h5 class="card-title mb-0">Liste des Contacts</h5>
+			</div>
+
+			<div class="card-body">
+				<div class="table-responsive">
+					<table id="contactTable" class="table">
+						<thead>
+							<tr>
+								<th>Lead ID</th>
+								<th>Entry Date</th>
+								<th>Modify Date</th>
+								<th>Status</th>
+								<th>User</th>
+								<th>Vendor Lead Code</th>
+								<th>Source ID</th>
+								<th>List ID</th>
+								<th>Phone Number</th>
+								<th>First Name</th>
+								<th>confirmation</th>
+								<th>Last Name</th>
+								<th>City</th>
+
+								<th>State</th>
+								<th>Postal Code</th>
+								<th>Country Code</th>
+								<th>Email</th>
+								<th>Comments</th>
+								<th>confirmation</th>
+
+
+							</tr>
+						</thead>
+						<tbody>
+							{% for vicidial in vicidial_lists %}
+								<tr>
+									<td>{{ vicidial.leadId }}</td>
+									<td>{{ vicidial.entryDate ? vicidial.entryDate|date('Y-m-d H:i:s') : '' }}</td>
+									<td>{{ vicidial.modifyDate ? vicidial.modifyDate|date('Y-m-d H:i:s') : '' }}</td>
+									<td>{{ vicidial.status }}</td>
+									<td>{{ vicidial.user }}</td>
+									<td>{{ vicidial.vendorLeadCode }}</td>
+									<td>{{ vicidial.sourceId }}</td>
+									<td>{{ vicidial.listId }}</td>
+									<td>{{ vicidial.phoneNumber }}</td>
+									<td>{{ vicidial.firstName }}</td>
+									<td>{{ vicidial.firstName }}</td>
+									<td>{{ vicidial.lastName }}</td>
+									<td>{{ vicidial.city }}</td>
+									<td>{{ vicidial.state }}</td>
+									<td>{{ vicidial.postalCode }}</td>
+									<td>{{ vicidial.countryCode }}</td>
+									<td>{{ vicidial.email }}</td>
+									<td>{{ vicidial.comments }}</td>
+									<td>
+										<div>
+											<input type="radio" id="confirmation_oui_{{ vicidial.leadId }}" name="confirmation[{{ vicidial.leadId }}]" value="oui"/>
+											<label for="confirmation_oui_{{ vicidial.leadId }}">Oui</label>
+										</div>
+										<div>
+											<input type="radio" id="confirmation_non_{{ vicidial.leadId }}" name="confirmation[{{ vicidial.leadId }}]" value="non"/>
+											<label for="confirmation_non_{{ vicidial.leadId }}">Non</label>
+										</div>
+									</td>
+
+
+								</tr>
+							{% else %}
+								<tr>
+									<td colspan="17">Aucun enregistrement trouvé</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+	</div>
+
+	<!-- Modal de déconnexion -->
+	<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="logoutModalLabel">Confirmation de Déconnexion</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+				</div>
+				<div class="modal-body">
+					Êtes-vous sûr de vouloir vous déconnecter ?
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+					<a href="{{ path('app_connexion') }}" class="btn btn-danger">Déconnexion</a>
+
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block javascripts %}
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+	<script>
+		// Initialisation de DataTable
+$(document).ready(function () {
+$('#contactTable').DataTable();
+
+// Ajouter l'événement de sauvegarde pour chaque bouton radio après l'initialisation de DataTable
+$('input[type="radio"]').on('change', saveSelection);
+
+// Charger la sélection au chargement de la page
+loadSelections();
+
+// Mettre à jour les notifications au chargement de la page
+updateNotifications();
+});
+
+// Fonction pour basculer la sidebar
+function toggleSidebar() {
+document.querySelector('.sidebar').classList.toggle('open');
+}
+
+// Fonction d'export Excel (à personnaliser)
+function exportExcel() {
+alert('Fonction export Excel à implémenter.');
+}
+
+// Fonction d'export en Excel (CSV)
+function exportExcel() {
+var csv = [];
+// Sélectionner toutes les lignes du tableau (y compris l'en-tête)
+var rows = document.querySelectorAll("#contactTable tr");
+
+// Parcourir les lignes
+rows.forEach(function (row) {
+var cols = row.querySelectorAll("th, td");
+var rowData = [];
+cols.forEach(function (col) {
+var data = col.innerText.trim();
+// Si l'élément est une cellule avec des radios de confirmation
+if (col.querySelector('input[type="radio"]')) {
+var selectedRadio = col.querySelector('input[type="radio"]:checked');
+if (selectedRadio) { // Récupérer la valeur "oui" ou "non" de la sélection
+data = selectedRadio.value === "oui" ? "Oui" : "Non";
+} else {
+data = ""; // Si rien n'est sélectionné, laisser vide
+}
+}
+// Échapper les guillemets doubles
+rowData.push('"' + data.replace(/"/g, '""') + '"');
+});
+csv.push(rowData.join(","));
+});
+
+// Créer un blob CSV
+var csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+
+// Créer un lien de téléchargement temporaire
+var downloadLink = document.createElement("a");
+downloadLink.download = "contacts.csv";
+downloadLink.href = window.URL.createObjectURL(csvFile);
+downloadLink.style.display = "none";
+
+document.body.appendChild(downloadLink);
+downloadLink.click();
+document.body.removeChild(downloadLink);
+}
+
+// Fonction pour sauvegarder la sélection des boutons radio
+function saveSelection(event) {
+var row = event.target.closest('tr');
+var radioName = event.target.name;
+var rowIndex = Array.from(row.parentElement.children).indexOf(row); // Index de la ligne
+var selectedValue = event.target.value;
+
+// Sauvegarder dans localStorage : on utilise l'index de la ligne et le nom du champ comme clé
+localStorage.setItem(`selection_${rowIndex}_${radioName}`, selectedValue);
+
+// Mettre à jour les notifications à chaque changement de sélection
+updateNotifications();
+}
+
+// Fonction pour charger la sélection sauvegardée
+function loadSelections() { // Sélectionner toutes les lignes du tableau (en excluant l'en-tête)
+var rows = document.querySelectorAll("#contactTable tbody tr");
+
+rows.forEach(function (row, rowIndex) {
+var radios = row.querySelectorAll('input[type="radio"]');
+radios.forEach(function (radio) { // Vérifier si une valeur est stockée pour cette ligne et ce radio
+var savedValue = localStorage.getItem(`selection_${rowIndex}_${
+radio.name
+}`);
+if (savedValue) { // Si une valeur est trouvée, sélectionner l'option correspondante
+if (savedValue === radio.value) {
+radio.checked = true;
+}
+}
+});
+});
+
+// Mettre à jour les notifications après le chargement des sélections
+updateNotifications();
+}
+
+// Fonction pour mettre à jour les notifications de comptage
+function updateNotifications() {
+var ouiCount = 0;
+var nonCount = 0;
+var noSelectionCount = 0;
+
+// Sélectionner toutes les lignes du tableau (en excluant l'en-tête)
+var rows = document.querySelectorAll("#contactTable tbody tr");
+
+rows.forEach(function (row) {
+var radios = row.querySelectorAll('input[type="radio"]');
+var selectedRadio = Array.from(radios).find(radio => radio.checked);
+
+if (selectedRadio) {
+if (selectedRadio.value === "oui") {
+ouiCount++;
+} else if (selectedRadio.value === "non") {
+nonCount++;
+}
+} else {
+noSelectionCount++;
+}
+});
+
+// Afficher les notifications
+document.getElementById("ouiCount").textContent = "Oui: " + ouiCount;
+document.getElementById("nonCount").textContent = "Non: " + nonCount;
+document.getElementById("noSelectionCount").textContent = "Pas de sélection: " + noSelectionCount;
+}
+	</script>
+
+{% endblock %}
